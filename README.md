@@ -1,3 +1,3 @@
 # Exposed ADT mapping
 
-An extension to [Exposed](https://github.com/JetBrains/Exposed) providing mappings between data entities and tables with support for algebraic data types
+A library based on [Exposed](https://github.com/JetBrains/Exposed) [DSL](https://github.com/JetBrains/Exposed/wiki/DSL) providing mappings between data entities and tables with support for (generic) algebraic data types
