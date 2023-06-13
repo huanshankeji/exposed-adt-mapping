@@ -17,5 +17,5 @@ repositories {
 dependencies {
     implementation(kotlin("gradle-plugin", "1.8.21"))
     implementation("com.huanshankeji:common-gradle-dependencies:0.6.0-20230609")
-    implementation("com.huanshankeji.team:gradle-plugins:0.4.1")
+    implementation("com.huanshankeji.team:gradle-plugins:0.5.0-SNAPSHOT") // TODO: don't use a snapshot version in a main branch
 }
