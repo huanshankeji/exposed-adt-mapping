@@ -1,13 +1,6 @@
 plugins {
-    kotlin("jvm") version "1.8.21"
-    `java-library`
-}
-
-repositories {
-    mavenCentral()
+    conventions
 }
 
 dependencies {
 }
-
-kotlin.jvmToolchain(8)
