@@ -587,7 +587,7 @@ inline fun <reified Data : Any> reflectionBasedClassPropertyDataMapper(
     tables: List<Table>,
     onDuplicateColumnPropertyNames: OnDuplicateColumnPropertyNames = CHOOSE_FIRST,
     propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
-    customMappings: PropertyColumnMappings<Data> = emptyList()
+    customMappings: PropertyColumnMappings<Data> = emptyList()  // TODO: consider using mappers (`ReflectionBasedClassPropertyDataMapper`) instead
 ): ReflectionBasedClassPropertyDataMapper<Data> {
     val typeAndClass = typeAndClassOf<Data>()
     return ReflectionBasedClassPropertyDataMapper(
