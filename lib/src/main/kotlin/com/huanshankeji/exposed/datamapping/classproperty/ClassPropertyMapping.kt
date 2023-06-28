@@ -1,5 +1,6 @@
 package com.huanshankeji.exposed.datamapping.classproperty
 
+import com.huanshankeji.BidirectionalConversion
 import com.huanshankeji.exposed.datamapping.DataMapper
 import com.huanshankeji.exposed.datamapping.NullableDataMapper
 import com.huanshankeji.exposed.datamapping.classproperty.OnDuplicateColumnPropertyNames.CHOOSE_FIRST
@@ -11,12 +12,9 @@ import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import org.slf4j.LoggerFactory
-import kotlin.reflect.KClass
-import kotlin.reflect.KProperty1
-import kotlin.reflect.KType
+import kotlin.reflect.*
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.primaryConstructor
-import kotlin.reflect.typeOf
 
 // Our own class mapping implementation using reflection which should be adapted using annotation processors and code generation in the future.
 
@@ -150,17 +148,15 @@ private fun KClass<*>.isAbstractOrSealed() =
  * @param skip both writing and reading. Note that the property type need not be nullable if it's only used for writing.
  * @param whetherNullDependentColumn required for nullable properties.
  */
-class PropertyColumnMappingConfig<P>(
+class PropertyColumnMappingConfig<DataT>(
     type: KType,
     val skip: Boolean = false,
     usedForQuery: Boolean = true,
-    val columnPropertyName: String? = null, // TODO: use the property directly instead of the name string
-    val whetherNullDependentColumn: Column<*>? = null, // for query
     /* TODO: whether it's null can depend on all columns:
         the property is null if when all columns are null (warn if some columns are not null),
         or a necessary column is null,
         in both cases of which warn if all nested properties are nullable */
-    val adt: Adt<P & Any>? = null, // for query and update
+    val persistence: Persistence<DataT>? = null, // for query and update
 ) {
     init {
         // perform the checks
@@ -183,7 +179,7 @@ class PropertyColumnMappingConfig<P>(
                 logger.warn("${::adt} is set for a primitive type $type and will be ignored.")
         }
         @Suppress("UNCHECKED_CAST")
-        val clazz = type.classifier as KClass<P & Any>
+        val clazz = type.classifier as KClass<DataT & Any>
         when (adt) {
             is Adt.Product -> require(clazz.isFinal || clazz.isOpen) { "the class $clazz must be instantiable (final or open) to be treated as a product type" }
             is Adt.Sum<*, *> -> require(clazz.isInheritable()) { "the class $clazz must be inheritable (open, abstract, or sealed) to be treated as a sum type" }
@@ -195,52 +191,82 @@ class PropertyColumnMappingConfig<P>(
         inline fun <reified PropertyData> create(
             skip: Boolean = false,
             usedForQuery: Boolean = true,
-            columnPropertyName: String? = null, // TODO: use the column property
-            nullDependentColumn: Column<*>? = null,
-            adt: Adt<PropertyData & Any>? = null
-        ) =
+            // TODO
+            ) =
             PropertyColumnMappingConfig(
                 typeOf<PropertyData>(), skip, usedForQuery, columnPropertyName, nullDependentColumn, adt
             )
     }
 
-    // ADT: algebraic data type
-    sealed class Adt<Data : Any> {
-        class Product<Data : Any>(val nestedConfigMap: PropertyColumnMappingConfigMap<Data>) :
-            Adt<Data>()
-
-        class Sum<Data : Any, CaseValue>(
-            clazz: KClass<Data>,
-            val subclassProductConfigMapOverride: Map<KClass<out Data>, Product<out Data>>, // TODO: why can't a sum type nest another sum type?
-            val sumTypeCaseConfig: SumTypeCaseConfig<Data, CaseValue>
-        ) : Adt<Data>() {
-            init {
-                require(subclassProductConfigMapOverride.keys.all { !it.isInheritable() && it.isSubclassOf(clazz) })
+    sealed class Persistence<DataT> {
+        class SingleColumn<DataT, ColumnT>(
+            //val columnPropertyName: String? = null, // old implementation
+            val columnProperty: ColumnProperty<ColumnT>? = null,
+            val singleColumnPersistence: SingleColumnPersistence<DataT, ColumnT>? = null
+        ) : Persistence<DataT>() {
+            sealed class ColumnProperty<ColumnT> {
+                class Ordinary<ColumnT>(val property: KProperty1<*, Column<ColumnT>>) : ColumnProperty<ColumnT>()
+                class EntityId<ColumnT>(val property: KProperty1<*, Column<EntityId<ColumnT>>>) : ColumnProperty<ColumnT>()
             }
 
-            companion object {
-                inline fun <reified Data : Any, CaseValue> createForSealed(
-                    subclassProductConfigMapOverride: Map<KClass<out Data>, Product<out Data>> = emptyMap(),
-                    sumTypeCaseConfig: SumTypeCaseConfig<Data, CaseValue>
-                ): Sum<Data, CaseValue> {
-                    val clazz = Data::class
-                    require(clazz.isSealed)
-                    return Sum(clazz, subclassProductConfigMapOverride, sumTypeCaseConfig)
-                }
+            sealed class SingleColumnPersistence<DataT, ColumnT> {
+                class Primitive<T> : SingleColumnPersistence<T, T>()
+                class Serialization<DataT, ColumnT>(val bidirectionalConversion: BidirectionalConversion<DataT, ColumnT>) :
+                    SingleColumnPersistence<DataT, ColumnT>()
 
-                inline fun <reified Data : Any, CaseValue> createForAbstract(
-                    subclassProductConfigMap: Map<KClass<out Data>, Product<out Data>>,
-                    sumTypeCaseConfig: SumTypeCaseConfig<Data, CaseValue>
-                ): Sum<Data, CaseValue> {
-                    val clazz = Data::class
-                    require(clazz.isAbstract)
-                    return Sum(clazz, subclassProductConfigMap, sumTypeCaseConfig)
-                }
+                /*
+                /**
+                 * Defaults to using the column name of the value class property.
+                 */
+                class PrimitiveWrapperValueClass<DataT> : Persistence<DataT>()
+                */
             }
         }
 
-        // not needed
-        //class Enum<Data : kotlin.Enum<*>, CaseValue> : Adt<Data>()
+        class NestedClass<DataT>(
+            // TODO: other strategies
+            val nullDependentColumn: Column<*>? = null,
+            val adt: Adt<DataT & Any>? = null,
+        ) : Persistence<DataT>() {
+            // ADT: algebraic data type
+            sealed class Adt<Data : Any> {
+                class Product<Data : Any>(val nestedConfigMap: PropertyColumnMappingConfigMap<Data>) :
+                    Adt<Data>()
+
+                class Sum<Data : Any, CaseValue>(
+                    clazz: KClass<Data>,
+                    val subclassProductConfigMapOverride: Map<KClass<out Data>, Product<out Data>>, // TODO: why can't a sum type nest another sum type?
+                    val sumTypeCaseConfig: SumTypeCaseConfig<Data, CaseValue>
+                ) : Adt<Data>() {
+                    init {
+                        require(subclassProductConfigMapOverride.keys.all { !it.isInheritable() && it.isSubclassOf(clazz) })
+                    }
+
+                    companion object {
+                        inline fun <reified Data : Any, CaseValue> createForSealed(
+                            subclassProductConfigMapOverride: Map<KClass<out Data>, Product<out Data>> = emptyMap(),
+                            sumTypeCaseConfig: SumTypeCaseConfig<Data, CaseValue>
+                        ): Sum<Data, CaseValue> {
+                            val clazz = Data::class
+                            require(clazz.isSealed)
+                            return Sum(clazz, subclassProductConfigMapOverride, sumTypeCaseConfig)
+                        }
+
+                        inline fun <reified Data : Any, CaseValue> createForAbstract(
+                            subclassProductConfigMap: Map<KClass<out Data>, Product<out Data>>,
+                            sumTypeCaseConfig: SumTypeCaseConfig<Data, CaseValue>
+                        ): Sum<Data, CaseValue> {
+                            val clazz = Data::class
+                            require(clazz.isAbstract)
+                            return Sum(clazz, subclassProductConfigMap, sumTypeCaseConfig)
+                        }
+                    }
+                }
+
+                // not needed
+                //class Enum<Data : kotlin.Enum<*>, CaseValue> : Adt<Data>()
+            }
+        }
     }
 }
 
