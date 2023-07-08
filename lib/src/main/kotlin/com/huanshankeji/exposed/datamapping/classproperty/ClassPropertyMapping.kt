@@ -147,7 +147,7 @@ fun getColumnByPropertyNameMap(
     }
 }
 
-private val logger = LoggerFactory.getLogger("class property mapping")
+private val logger = LoggerFactory.getLogger("class property mapping") // TODO: rename
 
 // Open or abstract but not sealed classes are not supported after this refactor because non-sealed subclasses are not supported yet in `FullConcreteTypeClass`.
 
@@ -178,9 +178,10 @@ class PropertyColumnMappingConfig<P>(
     init {
         // perform the checks
 
+        // TODO log property information instead of just property return type information in the messages
         if (type.isMarkedNullable) {
             if (skip && whetherNullDependentColumn !== null || adt !== null)
-                logger.warn("${::whetherNullDependentColumn.name} and ${::adt.name} are unnecessary when ${::skip.name} is configured to true.")
+                logger.warn("${::whetherNullDependentColumn.name} and ${::adt.name} are unnecessary when ${::skip.name} is configured to true for $type.")
         } else {
             // Non-nullable properties can be skipped when updating but not when querying.
             if (usedForQuery)
