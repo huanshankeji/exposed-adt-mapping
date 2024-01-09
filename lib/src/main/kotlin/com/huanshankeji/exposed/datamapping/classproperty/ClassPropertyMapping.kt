@@ -32,7 +32,7 @@ typealias PropertyColumnMappings<Data> = List<PropertyColumnMapping<Data, *>>
 typealias ClassPropertyColumnMappings<Data> = PropertyColumnMappings<Data>
 
 /*
-TODO: consider decoupling/removing `property` and `Data` from this class and rename it to `ColumnMapping`
+TODO (ADT normalization) consider decoupling/removing `property` and `Data` from this class and renaming it to `ColumnMapping`
  and add a `PropertyColumnMapping` containing the property and the `ColumnMapping`.
  However, after the refactor, `ColumnMapping` will still be coupled with `ClassPropertyColumnMappings` which is coupled with `PropertyColumnMapping`,
  so I am not sure whether this is necessary.
