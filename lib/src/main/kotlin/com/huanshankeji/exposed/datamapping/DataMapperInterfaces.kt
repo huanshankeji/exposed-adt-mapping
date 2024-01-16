@@ -32,4 +32,6 @@ interface NullableDataQueryMapper<Data> : SimpleNullableDataQueryMapper<Data> {
 interface DataQueryMapper<Data : Any> : NullableDataQueryMapper<Data>
 
 interface NullableDataMapper<Data> : NullableDataQueryMapper<Data>, NullableDataUpdateMapper<Data>
+
+// TODO rename to `NotNullDataMapper`
 interface DataMapper<Data : Any> : NullableDataMapper<Data>, DataQueryMapper<Data>, SimpleDataMapper<Data>

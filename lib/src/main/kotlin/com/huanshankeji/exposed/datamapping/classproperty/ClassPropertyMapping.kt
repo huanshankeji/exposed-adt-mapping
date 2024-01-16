@@ -9,9 +9,7 @@ import com.huanshankeji.exposed.datamapping.classproperty.PropertyColumnMapping.
 import com.huanshankeji.kotlin.reflect.fullconcretetype.FullConcreteTypeClass
 import com.huanshankeji.kotlin.reflect.fullconcretetype.FullConcreteTypeProperty1
 import com.huanshankeji.kotlin.reflect.fullconcretetype.fullConcreteTypeClassOf
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
@@ -20,6 +18,7 @@ import kotlin.reflect.KType
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.typeOf
+import kotlin.sequences.Sequence
 
 // Our own class mapping implementation using reflection which should be adapted using annotation processors and code generation in the future.
 
@@ -162,10 +161,14 @@ private fun KClass<*>.isAbstractOrSealed() =
 /**
  * @param skip both writing and reading. Note that the property type need not be nullable if it's only used for writing.
  * @param whetherNullDependentColumn required for nullable properties.
+ * @param adt sub-configs for properties and subclasses.
  */
+// TODO refactor the mutually exclusive arguments to sum type constructors (sealed subclasses)
 class PropertyColumnMappingConfig<P>(
     type: KType,
     val skip: Boolean = false,
+    // TODO Support query-only mappers, and update-only mappers. However this may require HKT or unsafe casting.
+    val customMapper: NullableDataMapper<P>? = null,
     usedForQuery: Boolean = true,
     val columnPropertyName: String? = null, // TODO: use the property directly instead of the name string
     val whetherNullDependentColumn: Column<*>? = null, // for query
@@ -208,13 +211,14 @@ class PropertyColumnMappingConfig<P>(
     companion object {
         inline fun <reified PropertyData> create(
             skip: Boolean = false,
+            customMapper: NullableDataMapper<PropertyData>? = null,
             usedForQuery: Boolean = true,
             columnPropertyName: String? = null, // TODO: use the column property
             nullDependentColumn: Column<*>? = null,
             adt: Adt<PropertyData & Any>? = null
         ) =
             PropertyColumnMappingConfig(
-                typeOf<PropertyData>(), skip, usedForQuery, columnPropertyName, nullDependentColumn, adt
+                typeOf<PropertyData>(), skip, customMapper, usedForQuery, columnPropertyName, nullDependentColumn, adt
             )
     }
 
@@ -307,9 +311,13 @@ private fun <Data : Any> doGetDefaultClassPropertyColumnMappings(
             fun <PropertyData> typeParameterHelper(fctProperty: FullConcreteTypeProperty1<Data, PropertyData>): PropertyColumnMapping<Data, PropertyData> {
                 @Suppress("NAME_SHADOWING")
                 val kProperty = fctProperty.kProperty
-                val config = propertyColumnMappingConfigMapOverride[kProperty]
+                val config =
+                    propertyColumnMappingConfigMapOverride[kProperty] as PropertyColumnMappingConfig<PropertyData>?
                 if (config?.skip == true)
                     return Skip(fctProperty)
+                config?.customMapper?.let {
+                    return Custom(fctProperty, it)
+                }
 
                 val columnPropertyName = config?.columnPropertyName ?: name
                 val propertyReturnTypeFctClass = fctProperty.returnType
@@ -419,7 +427,7 @@ private fun <Data : Any> doGetDefaultClassPropertyColumnMappings(
 
 fun <Data : Any> getDefaultClassPropertyColumnMappings(
     fullConcreteTypeClass: FullConcreteTypeClass<Data>,
-    tables: List<Table>, onDuplicateColumnPropertyNames: OnDuplicateColumnPropertyNames = CHOOSE_FIRST,
+    tables: List<Table>, onDuplicateColumnPropertyNames: OnDuplicateColumnPropertyNames = CHOOSE_FIRST, // TODO consider removing this default argument as there is one for joins now
     propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
     customMappings: PropertyColumnMappings<Data> = emptyList()
 ): ClassPropertyColumnMappings<Data> =
@@ -609,11 +617,13 @@ fun setUpdateBuilderColumnsToNulls(columns: List<Column<*>>, updateBuilder: Upda
 fun ClassPropertyColumnMappings<*>.getColumnSet(): Set<Column<*>> =
     buildSet { forEachColumn { add(it) } }
 
+// TODO add a version of `reflectionBasedClassPropertyDataMapper` that takes column properties and make the following 2 functions depend on it
+
 inline fun <reified Data : Any> reflectionBasedClassPropertyDataMapper(
     tables: List<Table>,
-    onDuplicateColumnPropertyNames: OnDuplicateColumnPropertyNames = CHOOSE_FIRST,
+    onDuplicateColumnPropertyNames: OnDuplicateColumnPropertyNames = CHOOSE_FIRST, // TODO consider removing this default argument as there is one for joins now
     propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
-    customMappings: PropertyColumnMappings<Data> = emptyList()  // TODO: consider using mappers (`ReflectionBasedClassPropertyDataMapper`) instead
+    customMappings: PropertyColumnMappings<Data> = emptyList() // TODO consider removing this parameter if possible
 ): ReflectionBasedClassPropertyDataMapper<Data> {
     val fullConcreteTypeClass = fullConcreteTypeClassOf<Data>()
     return ReflectionBasedClassPropertyDataMapper(
@@ -630,3 +640,13 @@ inline fun <reified Data : Any/*, TableT : Table*/> reflectionBasedClassProperty
     customMappings: PropertyColumnMappings<Data> = emptyList()
 ) =
     reflectionBasedClassPropertyDataMapper(listOf(table), THROW, propertyColumnMappingConfigMapOverride, customMappings)
+
+/**
+ * A shortcut for [Join]s.
+ */
+inline fun <reified Data : Any> reflectionBasedClassPropertyDataMapper(
+    join : Join,
+    propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
+    customMappings: PropertyColumnMappings<Data> = emptyList()
+) =
+    reflectionBasedClassPropertyDataMapper(join.targetTables(), CHOOSE_FIRST, propertyColumnMappingConfigMapOverride, customMappings)
