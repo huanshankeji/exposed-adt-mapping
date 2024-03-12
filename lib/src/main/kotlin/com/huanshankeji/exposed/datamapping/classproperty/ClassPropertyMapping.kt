@@ -263,8 +263,8 @@ class PropertyColumnMappingConfig<P>(
     }
 }
 
-// TODO: constrain the property return type and the config type parameter to be the same
 typealias PropertyColumnMappingConfigMap2<Data /*: Any*/, PropertyReturnType> = Map<KProperty1<Data, PropertyReturnType>, PropertyColumnMappingConfig<PropertyReturnType>>
+// TODO Constrain the property return type and the config type parameter to be the same. Consider using builder DSLs.
 typealias PropertyColumnMappingConfigMap<Data /*: Any*/> = PropertyColumnMappingConfigMap2<Data, *>
 
 private fun KClass<*>.isObject() =
