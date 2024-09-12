@@ -427,7 +427,8 @@ private fun <Data : Any> doGetDefaultClassPropertyColumnMappings(
 
 fun <Data : Any> getDefaultClassPropertyColumnMappings(
     fullConcreteTypeClass: FullConcreteTypeClass<Data>,
-    tables: List<Table>, onDuplicateColumnPropertyNames: OnDuplicateColumnPropertyNames = CHOOSE_FIRST, // TODO consider removing this default argument as there is one for joins now
+    tables: List<Table>,
+    onDuplicateColumnPropertyNames: OnDuplicateColumnPropertyNames = CHOOSE_FIRST, // TODO consider removing this default argument as there is one for joins now
     propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
     customMappings: PropertyColumnMappings<Data> = emptyList()
 ): ClassPropertyColumnMappings<Data> =
@@ -645,8 +646,22 @@ inline fun <reified Data : Any/*, TableT : Table*/> reflectionBasedClassProperty
  * A shortcut for [Join]s.
  */
 inline fun <reified Data : Any> reflectionBasedClassPropertyDataMapper(
-    join : Join,
+    join: Join,
     propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
     customMappings: PropertyColumnMappings<Data> = emptyList()
 ) =
-    reflectionBasedClassPropertyDataMapper(join.targetTables(), CHOOSE_FIRST, propertyColumnMappingConfigMapOverride, customMappings)
+    reflectionBasedClassPropertyDataMapper(
+        join.targetTables(), CHOOSE_FIRST, propertyColumnMappingConfigMapOverride, customMappings
+    )
+
+// not completely implemented yet
+private inline fun <reified Data : Any> reflectionBasedClassPropertyDataMapper(
+    queryAlias: QueryAlias,
+    propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
+    customMappings: PropertyColumnMappings<Data> = emptyList()
+): ReflectionBasedClassPropertyDataMapper<Data> =
+    reflectionBasedClassPropertyDataMapper(
+        queryAlias.query.targets, CHOOSE_FIRST, propertyColumnMappingConfigMapOverride, customMappings
+    ).run {
+        TODO("map the columns to alias columns")
+    }
