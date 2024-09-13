@@ -190,7 +190,7 @@ class PropertyColumnMappingConfig<P>(
             if (usedForQuery)
                 require(!skip)
             require(whetherNullDependentColumn === null) {
-                "`whetherNullDependentColumn` should not be null for a not-null type $type"
+                "`whetherNullDependentColumn` should be null for a not-null type $type"
             }
         }
 
