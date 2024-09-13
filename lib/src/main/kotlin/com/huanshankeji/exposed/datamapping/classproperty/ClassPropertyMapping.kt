@@ -189,7 +189,9 @@ class PropertyColumnMappingConfig<P>(
             // Non-nullable properties can be skipped when updating but not when querying.
             if (usedForQuery)
                 require(!skip)
-            require(whetherNullDependentColumn === null)
+            require(whetherNullDependentColumn === null) {
+                "`whetherNullDependentColumn` should not be null for a not-null type $type"
+            }
         }
 
 
