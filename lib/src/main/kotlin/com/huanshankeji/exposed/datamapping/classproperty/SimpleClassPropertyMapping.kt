@@ -2,14 +2,16 @@ package com.huanshankeji.exposed.datamapping.classproperty
 
 import com.huanshankeji.exposed.datamapping.SimpleDataMapper
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.Alias
+import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
-import kotlin.sequences.Sequence
 
 fun ResultRow.getValue(column: Column<*>): Any? =
     this[column].let {
@@ -23,7 +25,7 @@ interface ReflectionBasedSimpleClassPropertyDataMapper<Data : Any> : SimpleDataM
 
     override fun resultRowToData(resultRow: ResultRow): Data {
         val params = propertyAndColumnPairs.map { (_, column) -> resultRow.getValue(column) }
-        return dataPrimaryConstructor.call(*params.toTypedArray())
+        return dataPrimaryConstructor.callWithCatch(*params.toTypedArray())
     }
 
     override fun setUpdateBuilder(data: Data, updateBuilder: UpdateBuilder<*>) {

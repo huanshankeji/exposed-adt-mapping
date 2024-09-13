@@ -462,7 +462,7 @@ private fun <Data : Any> constructDataWithResultRow(
     classPropertyColumnMappings: ClassPropertyColumnMappings<Data>,
     resultRow: ResultRow
 ): Data =
-    fctClass.kClass.primaryConstructor!!.call(*classPropertyColumnMappings.map {
+    fctClass.kClass.primaryConstructor!!.callWithCatch(*classPropertyColumnMappings.map {
         fun <PropertyReturnT> typeParameterHelper(
             propertyColumnMapping: PropertyColumnMapping<Data, PropertyReturnT>,
             nestedFctClass: FullConcreteTypeClass<PropertyReturnT & Any>
