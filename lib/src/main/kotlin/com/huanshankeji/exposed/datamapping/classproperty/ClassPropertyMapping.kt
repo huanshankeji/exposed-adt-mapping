@@ -125,7 +125,11 @@ fun getColumnsWithPropertyNamesWithoutTypeParameter(
     }
 
 enum class OnDuplicateColumnPropertyNames {
-    CHOOSE_FIRST, THROW
+    /**
+     * Use left joins only for this to work properly. Don't use right joins.
+     */
+    CHOOSE_FIRST,
+    THROW
 }
 
 fun getColumnByPropertyNameMap(
