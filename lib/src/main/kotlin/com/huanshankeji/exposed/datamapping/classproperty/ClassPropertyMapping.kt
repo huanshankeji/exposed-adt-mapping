@@ -449,6 +449,7 @@ fun <Data : Any> getDefaultClassPropertyColumnMappings(
     )
 
 // TODO: decouple query mapper and update mapper.
+// TODO add the `ColumnSet` as a type parameter since all kinds of `ColumnSet`s will be supported in `reflectionBasedClassPropertyDataMapper`
 /** Supports classes with nested composite class properties and multiple tables */
 class ReflectionBasedClassPropertyDataMapper<Data : Any>(
     val fullConcreteTypeClass: FullConcreteTypeClass<Data>,
