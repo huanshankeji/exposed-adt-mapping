@@ -31,7 +31,7 @@ interface ReflectionBasedSimpleClassPropertyDataMapper<Data : Any> : SimpleDataM
     override fun setUpdateBuilder(data: Data, updateBuilder: UpdateBuilder<*>) {
         for ((property, column) in propertyAndColumnPairs)
             @Suppress("UNCHECKED_CAST")
-            updateBuilder[column as Column<Any?>] = property(data)
+            updateBuilder.setWithColumnPossiblyBeingEntityId(column as Column<Any?>, property(data))
     }
 }
 
