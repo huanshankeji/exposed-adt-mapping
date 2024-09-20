@@ -256,7 +256,7 @@ private fun <Data : Any> doGetDefaultClassPropertyColumnMappings(
     tables: List<Table>, // for error messages only
     columnByPropertyNameMap: Map<String, Column<*>>, // TODO: refactor as `Data` may be a sum type
     propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
-    customMappings: PropertyColumnMappings<Data> = emptyList()
+    customMappings: PropertyColumnMappings<Data> = emptyList() // TODO: merge into `propertyColumnMappingConfigMapOverride` for better usability
 ): ClassPropertyColumnMappings<Data> {
     val customMappingPropertySet = customMappings.asSequence().map { it.property }.toSet()
     val dataCrtMemberPropertyMap = typeAndClass.concreteReturnTypeMemberProperties().asSequence()
