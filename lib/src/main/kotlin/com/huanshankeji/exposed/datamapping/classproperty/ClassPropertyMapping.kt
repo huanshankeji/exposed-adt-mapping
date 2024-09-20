@@ -284,7 +284,7 @@ private fun <Data : Any> doGetDefaultClassPropertyColumnMappings(
     customMappings: PropertyColumnMappings<Data> = emptyList()
     /* TODO Constructing `FullConcreteTypeProperty1` seems complicated after the code is refactored.
         Consider refactoring `PropertyColumnMapping` with one extra `Property` type parameter and apply simple `KProperty` for `customMappings`,
-        or merging it into config. */
+        or merging it into `propertyColumnMappingConfigMapOverride` for better usability. */
 ): ClassPropertyColumnMappings<Data> {
     val customMappingPropertySet = customMappings.asSequence().map { it.fctProperty }.toSet()
 
