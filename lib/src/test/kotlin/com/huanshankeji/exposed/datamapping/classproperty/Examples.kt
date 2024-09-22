@@ -88,8 +88,7 @@ fun main() {
 
         val filmId = 2
         val episodeIIFilmDetails = FilmDetails(2, "Star Wars: Episode II – Attack of the Clones", directorId)
-        val filmWithDirectorId =
-            FilmWithDirectorId(filmId, episodeIIFilmDetails)
+        val filmWithDirectorId = FilmWithDirectorId(filmId, episodeIIFilmDetails)
         Films.insert(Mappers.filmWithDirectorId.updateBuilderSetter(filmWithDirectorId)) // insert with the ID
 
         val fullFilm = with(Mappers.fullFilm) {
