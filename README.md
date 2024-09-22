@@ -8,6 +8,8 @@ This project is an attempt to provide an alternative to [Exposed DAO](https://gi
 
 ## Basic usage guide
 
+Please note that these APIs are far from stable. There are going to be refactors in future releases.
+
 ### Table and data definitions
 
 #### Tables and joins
