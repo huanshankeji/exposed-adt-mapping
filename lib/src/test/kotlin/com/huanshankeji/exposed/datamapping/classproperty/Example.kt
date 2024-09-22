@@ -27,13 +27,7 @@ val filmsLeftJoinDirectors = Films leftJoin Directors
 
 typealias DirectorId = Int
 
-class Director(val directorId: DirectorId, val directorName: String)
-
-typealias FilmId = Int
-
-class Film<DirectorT>(val filmId: FilmId, val filmDetails: FilmDetails<DirectorT>)
-typealias FilmWithDirectorId = Film<DirectorId>
-typealias FullFilm = Film<Director>
+class Director(val directorId: DirectorId, val name: String)
 
 class FilmDetails<DirectorT>(
     val sequelId: Int,
@@ -42,12 +36,19 @@ class FilmDetails<DirectorT>(
 )
 typealias FilmDetailsWithDirectorId = FilmDetails<DirectorId>
 
+typealias FilmId = Int
+
+class Film<DirectorT>(val filmId: FilmId, val filmDetails: FilmDetails<DirectorT>)
+typealias FilmWithDirectorId = Film<DirectorId>
+typealias FullFilm = Film<Director>
+
 
 object Mappers {
     val director = reflectionBasedClassPropertyDataMapper<Director>(Directors)
     val filmDetailsWithDirectorId = reflectionBasedClassPropertyDataMapper<FilmDetailsWithDirectorId>(
         Films,
         propertyColumnMappingConfigMapOverride = mapOf(
+            // The default name is the property name "director", but there is no column property with such a name, therefore we need to pass a custom name.
             FilmDetailsWithDirectorId::director to PropertyColumnMappingConfig.create<DirectorId>(columnPropertyName = Films::directorId.name)
         )
     )
@@ -55,6 +56,7 @@ object Mappers {
         Films,
         propertyColumnMappingConfigMapOverride = mapOf(
             FilmWithDirectorId::filmDetails to PropertyColumnMappingConfig.create<FilmDetailsWithDirectorId>(
+                // You can pass a nested custom mapper.
                 customMapper = filmDetailsWithDirectorId
             )
         )
@@ -65,7 +67,7 @@ object Mappers {
             FullFilm::filmDetails to PropertyColumnMappingConfig.create(
                 adt = PropertyColumnMappingConfig.Adt.Product(
                     mapOf(
-                        // Because `name` is a duplicate name column so a custom mapper has to be passed here, otherwise the `CHOOSE_FIRST` option make the data property map to the wrong column.
+                        // Because `name` is a duplicate name column so a custom mapper has to be passed here, otherwise the `CHOOSE_FIRST` option maps the data property `Director::name` to the wrong column `Films::name`.
                         FilmDetails<Director>::director to PropertyColumnMappingConfig.create<Director>(customMapper = director)
                     )
                 )
@@ -88,12 +90,12 @@ fun main() {
         val episodeIIFilmDetails = FilmDetails(2, "Star Wars: Episode II – Attack of the Clones", directorId)
         val filmWithDirectorId =
             FilmWithDirectorId(filmId, episodeIIFilmDetails)
-        Films.insert(Mappers.filmWithDirectorId.updateBuilderSetter(filmWithDirectorId))
+        Films.insert(Mappers.filmWithDirectorId.updateBuilderSetter(filmWithDirectorId)) // insert with the ID
 
         val fullFilm = with(Mappers.fullFilm) {
             resultRowToData(filmsLeftJoinDirectors.select(neededColumns).where(Films.filmId eq filmId).single())
         }
-        // available soon in 0.2.0
+        // not available yet, available soon in 0.2.0
         val fullFilms =
             filmsLeftJoinDirectors.selectWithMapper(Mappers.fullFilm, Films.filmId inList listOf(1, 2)).toList()
     }
