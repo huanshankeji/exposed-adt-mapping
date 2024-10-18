@@ -26,7 +26,7 @@ interface SimpleDataMapper<Data : Any> : SimpleDataQueryMapper<Data>, DataUpdate
 
 
 interface NullableDataQueryMapper<Data> : SimpleNullableDataQueryMapper<Data> {
-    val neededColumns: List<Column<*>>
+    val neededColumns: List<Column<*>> // TODO consider refactoring to `ExpressionWithColumnType`
 }
 
 interface DataQueryMapper<Data : Any> : NullableDataQueryMapper<Data>
