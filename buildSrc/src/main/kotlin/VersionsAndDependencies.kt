@@ -1,7 +1,7 @@
 import com.huanshankeji.CommonDependencies
 import com.huanshankeji.CommonVersions
 
-val projectVersion = "0.1.0"
+val projectVersion = "0.2.0"
 
-val commonVersions = CommonVersions()
+val commonVersions = CommonVersions(kotlinCommon = "0.5.1")
 val commonDependencies = CommonDependencies(commonVersions)

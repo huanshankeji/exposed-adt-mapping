@@ -40,6 +40,7 @@ sealed class PropertyColumnMapping<Data : Any, PropertyData>(val fctProperty: Fu
     class SqlPrimitive<Data : Any, PropertyData>(
         fctProperty: FullConcreteTypeProperty1<Data, PropertyData>,
         val column: Column<PropertyData>
+        //val isEntityId : Boolean // TODO implement or remove, or add another separate sealed subclass
     ) : PropertyColumnMapping<Data, PropertyData>(fctProperty)
 
     class NestedClass<Data : Any, PropertyData>(
@@ -114,7 +115,8 @@ fun KClass<*>.isExposedSqlPrimitiveType(): Boolean =
 fun KType.isExposedSqlPrimitiveType() =
     (classifier as KClass<*>).isExposedSqlPrimitiveType()
 
-class ColumnWithPropertyName(val propertyName: String, val column: Column<*>)
+// made a data class so it can be printed while debugging
+data class ColumnWithPropertyName(val propertyName: String, val column: Column<*>)
 
 fun getColumnsWithPropertyNamesWithoutTypeParameter(
     table: Table, clazz: KClass<out Table> = table::class
@@ -125,7 +127,11 @@ fun getColumnsWithPropertyNamesWithoutTypeParameter(
     }
 
 enum class OnDuplicateColumnPropertyNames {
-    CHOOSE_FIRST, THROW
+    /**
+     * Use left joins only for this to work properly. Don't use right joins.
+     */
+    CHOOSE_FIRST,
+    THROW
 }
 
 fun getColumnByPropertyNameMap(
@@ -189,7 +195,9 @@ class PropertyColumnMappingConfig<P>(
             // Non-nullable properties can be skipped when updating but not when querying.
             if (usedForQuery)
                 require(!skip)
-            require(whetherNullDependentColumn === null)
+            require(whetherNullDependentColumn === null) {
+                "`whetherNullDependentColumn` should be null for a not-null type $type"
+            }
         }
 
 
@@ -224,6 +232,7 @@ class PropertyColumnMappingConfig<P>(
 
     // ADT: algebraic data type
     sealed class Adt<Data : Any> {
+        // TODO use a custom type instead of `Pair` for the map entries used to construct the map so more type-safety can be ensured
         class Product<Data : Any>(val nestedConfigMap: PropertyColumnMappingConfigMap<Data>) :
             Adt<Data>()
 
@@ -278,7 +287,7 @@ private fun <Data : Any> doGetDefaultClassPropertyColumnMappings(
     customMappings: PropertyColumnMappings<Data> = emptyList()
     /* TODO Constructing `FullConcreteTypeProperty1` seems complicated after the code is refactored.
         Consider refactoring `PropertyColumnMapping` with one extra `Property` type parameter and apply simple `KProperty` for `customMappings`,
-        or merging it into config. */
+        or merging it into `propertyColumnMappingConfigMapOverride` for better usability. */
 ): ClassPropertyColumnMappings<Data> {
     val customMappingPropertySet = customMappings.asSequence().map { it.fctProperty }.toSet()
 
@@ -347,7 +356,7 @@ private fun <Data : Any> doGetDefaultClassPropertyColumnMappings(
                                 1. find the first non-nullable column with the suffix "id".
 
                                 They all have their drawbacks.
-                                The first approach is too unpredictable, adding or removing properties can affect which column to choose.
+                                Both the first approach and the third approach are too unpredictable, adding or removing properties can affect which column to choose.
                                 Both the second and the third approach can't deal with the case where the column is not within the mapped columns,
                                 which happens when selecting a small portion of the fields as data.
                                  */
@@ -427,7 +436,8 @@ private fun <Data : Any> doGetDefaultClassPropertyColumnMappings(
 
 fun <Data : Any> getDefaultClassPropertyColumnMappings(
     fullConcreteTypeClass: FullConcreteTypeClass<Data>,
-    tables: List<Table>, onDuplicateColumnPropertyNames: OnDuplicateColumnPropertyNames = CHOOSE_FIRST, // TODO consider removing this default argument as there is one for joins now
+    tables: List<Table>,
+    onDuplicateColumnPropertyNames: OnDuplicateColumnPropertyNames = CHOOSE_FIRST, // TODO consider removing this default argument as there is one for joins now
     propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
     customMappings: PropertyColumnMappings<Data> = emptyList()
 ): ClassPropertyColumnMappings<Data> =
@@ -439,6 +449,7 @@ fun <Data : Any> getDefaultClassPropertyColumnMappings(
     )
 
 // TODO: decouple query mapper and update mapper.
+// TODO add the `ColumnSet` as a type parameter since all kinds of `ColumnSet`s will be supported in `reflectionBasedClassPropertyDataMapper`
 /** Supports classes with nested composite class properties and multiple tables */
 class ReflectionBasedClassPropertyDataMapper<Data : Any>(
     val fullConcreteTypeClass: FullConcreteTypeClass<Data>,
@@ -459,7 +470,7 @@ private fun <Data : Any> constructDataWithResultRow(
     classPropertyColumnMappings: ClassPropertyColumnMappings<Data>,
     resultRow: ResultRow
 ): Data =
-    fctClass.kClass.primaryConstructor!!.call(*classPropertyColumnMappings.map {
+    fctClass.kClass.primaryConstructor!!.callWithCatch(*classPropertyColumnMappings.map {
         fun <PropertyReturnT> typeParameterHelper(
             propertyColumnMapping: PropertyColumnMapping<Data, PropertyReturnT>,
             nestedFctClass: FullConcreteTypeClass<PropertyReturnT & Any>
@@ -511,8 +522,10 @@ fun <Data : Any> setUpdateBuilder(
         fun <PropertyData> typeParameterHelper(propertyColumnMapping: PropertyColumnMapping<Data, PropertyData>) {
             val propertyData = propertyColumnMapping.fctProperty.kProperty(data)
             when (propertyColumnMapping) {
-                is SqlPrimitive ->
-                    updateBuilder[propertyColumnMapping.column] = propertyData
+                is SqlPrimitive -> {
+                    // TODO also consider judging whether it's an entity ID when constructing the `PropertyColumnMapping`
+                    updateBuilder.setWithColumnPossiblyBeingEntityId(propertyColumnMapping.column, propertyData)
+                }
 
                 is NestedClass -> {
                     // `propertyColumnMapping.nullability` is not needed here
@@ -619,6 +632,9 @@ fun ClassPropertyColumnMappings<*>.getColumnSet(): Set<Column<*>> =
 
 // TODO add a version of `reflectionBasedClassPropertyDataMapper` that takes column properties and make the following 2 functions depend on it
 
+/**
+ * @param tables be sure that the tables are passed in the right order.
+ */
 inline fun <reified Data : Any> reflectionBasedClassPropertyDataMapper(
     tables: List<Table>,
     onDuplicateColumnPropertyNames: OnDuplicateColumnPropertyNames = CHOOSE_FIRST, // TODO consider removing this default argument as there is one for joins now
@@ -645,8 +661,32 @@ inline fun <reified Data : Any/*, TableT : Table*/> reflectionBasedClassProperty
  * A shortcut for [Join]s.
  */
 inline fun <reified Data : Any> reflectionBasedClassPropertyDataMapper(
-    join : Join,
+    join: Join,
     propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
     customMappings: PropertyColumnMappings<Data> = emptyList()
 ) =
-    reflectionBasedClassPropertyDataMapper(join.targetTables(), CHOOSE_FIRST, propertyColumnMappingConfigMapOverride, customMappings)
+    reflectionBasedClassPropertyDataMapper(
+        join.targetTables(), CHOOSE_FIRST, propertyColumnMappingConfigMapOverride, customMappings
+    )
+
+// not completely implemented yet
+private inline fun <reified Data : Any> reflectionBasedClassPropertyDataMapper(
+    queryAlias: QueryAlias,
+    propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
+    customMappings: PropertyColumnMappings<Data> = emptyList()
+): ReflectionBasedClassPropertyDataMapper<Data> =
+    reflectionBasedClassPropertyDataMapper(
+        queryAlias.query.targets, CHOOSE_FIRST, propertyColumnMappingConfigMapOverride, customMappings
+    ).run {
+        TODO("map the columns to alias columns")
+    }
+
+/**
+ * @see targetTables
+ */
+private inline fun <reified Data : Any> reflectionBasedClassPropertyDataMapper(
+    columnSet: ColumnSet,
+    propertyColumnMappingConfigMapOverride: PropertyColumnMappingConfigMap<Data> = emptyMap(),
+    customMappings: PropertyColumnMappings<Data> = emptyList()
+): ReflectionBasedClassPropertyDataMapper<Data> =
+    TODO()
