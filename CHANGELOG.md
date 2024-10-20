@@ -1,6 +1,6 @@
 # Change log
 
-## v0.2.0 / 2024-6-19
+## v0.2.0 / 2024-10-19
 
 * bump Exposed to 0.53.0
 * add some more detailed exception messages
