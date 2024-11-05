@@ -13,7 +13,7 @@ dependencies {
 dokka {
     dokkaSourceSets.all {
         sourceLink {
-            remoteUrl("https://github.com/huanshankeji/exposed-adt-mapping/tree/v${version}/lib")
+            remoteUrl("https://github.com/huanshankeji/exposed-adt-mapping/tree/65548c38a72f037345ad0aff4982522348753fdf/lib")
             remoteLineSuffix.set("#L")
         }
     }
