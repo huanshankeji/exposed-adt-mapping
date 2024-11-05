@@ -10,6 +10,8 @@ This project is an attempt to provide an alternative to [Exposed DAO](https://gi
 
 Please note that these APIs are far from stable. There are going to be refactors in future releases.
 
+[Check out the API documentation here.](https://huanshankeji.github.io/exposed-adt-mapping/.)
+
 ### Table and data definitions
 
 #### Tables and joins
