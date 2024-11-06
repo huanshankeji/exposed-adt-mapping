@@ -7,6 +7,7 @@ rootProject.name = "exposed-adt-mapping"
 include("lib")
 project(":lib").name = rootProject.name
 
+// for Dokka
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositories {
