@@ -6,3 +6,10 @@ plugins {
 rootProject.name = "exposed-adt-mapping"
 include("lib")
 project(":lib").name = rootProject.name
+
+@Suppress("UnstableApiUsage")
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+    }
+}
