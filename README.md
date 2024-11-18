@@ -101,7 +101,7 @@ object Mappers {
 
 ### CRUD operations
 
-Call `updateBuilderSetter` to get a setter lambda to pass to `insert` or `update`. Call `selectWithMapper` to execute a query with a mapper (not available yet, available soon in 0.2.0).
+Call `updateBuilderSetter` to get a setter lambda to pass to `insert` or `update`. Call `selectWithMapper` to execute a query with a mapper.
 
 ```kotlin
 val directorId = 1
