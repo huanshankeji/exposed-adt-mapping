@@ -6,9 +6,23 @@ A library based on [Exposed](https://github.com/JetBrains/Exposed) [DSL](https:/
 
 This project is an attempt to provide an alternative to [Exposed DAO](https://github.com/JetBrains/Exposed/wiki/DAO) while supporting some more advanced functional programming features. See JetBrains/Exposed#24 for more details.
 
+## Add to your dependencies
+
+### The Maven coordinate
+
+```kotlin
+"com.huanshankeji:exposed-adt-mapping:$libraryVersion"
+```
+
+### **Important note**
+
+As Exposed is a library that has not reached stability yet and often has incompatible changes, you are recommended to stick to the same version of Exposed used by this library. The current version is v0.56.0.
+
 ## Basic usage guide
 
 Please note that these APIs are far from stable. There are going to be refactors in future releases.
+
+[Check out the API documentation here.](https://huanshankeji.github.io/exposed-adt-mapping/.)
 
 ### Table and data definitions
 
@@ -99,7 +113,7 @@ object Mappers {
 
 ### CRUD operations
 
-Call `updateBuilderSetter` to get a setter lambda to pass to `insert` or `update`. Call `selectWithMapper` to execute a query with a mapper (not available yet, available soon in 0.2.0).
+Call `updateBuilderSetter` to get a setter lambda to pass to `insert` or `update`. Call `selectWithMapper` to execute a query with a mapper.
 
 ```kotlin
 val directorId = 1
