@@ -3,7 +3,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.4.0"
 }
 
-rootProject.name = "exposed-adt-mapping"
+rootProject.name = "exposed-gadt-mapping"
 include("lib")
 project(":lib").name = rootProject.name
 

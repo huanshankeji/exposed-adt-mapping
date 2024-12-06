@@ -8,5 +8,5 @@ plugins {
 }
 
 dependencies {
-    dokka(project(":exposed-adt-mapping"))
+    dokka(project(":exposed-gadt-mapping"))
 }

@@ -21,8 +21,8 @@ version = projectVersion
 publishing.publications.withType<MavenPublication> {
     pomForTeamDefaultOpenSource(
         project,
-        "Exposed ADT mapping",
-        "mappings between data entities and tables with support for (generic) algebraic data types based on Exposed DSL"
+        "Exposed GADT mapping",
+        "mappings between data entities and tables with support for generalized algebraic data types based on Exposed DSL"
     ) {
         `Shreck Ye`()
     }
